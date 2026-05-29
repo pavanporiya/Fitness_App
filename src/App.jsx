@@ -1627,6 +1627,299 @@ export default function App() {
                 </div>
               </div>
 
+              {/* --- 6. PERSONALIZED DIETARY BLUEPRINT & CONCLUSION CARD --- */}
+              <div className="glass-card print-card rounded-2xl border border-glass-border p-6 shadow-md select-none space-y-6 bg-gradient-to-br from-slate-900/60 to-obsidian">
+                <div className="flex items-center space-x-2.5 pb-4 border-b border-glass-border justify-between">
+                  <div className="flex items-center space-x-2.5">
+                    <Brain className="w-5 h-5 text-neonBlue-glow animate-pulse-glow" />
+                    <div>
+                      <h3 className="text-base font-bold text-white">Client Summary & Dietary Blueprint</h3>
+                      <p className="text-xs text-slate-400">Actionable nutrition protocols, meal allocations, and behavioral guidelines.</p>
+                    </div>
+                  </div>
+                  <span className="bg-neonBlue/10 border border-neonBlue-glow text-neonBlue-glow text-[9px] font-mono px-2 py-0.5 rounded font-bold uppercase">
+                    EASY READ
+                  </span>
+                </div>
+
+                {/* A. Nutrition Dashboard Badges */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-glass-border text-center space-y-1">
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-mono">Daily Calorie Target</span>
+                    <span className="block text-lg font-extrabold text-neonBlue-glow font-mono">
+                      {activeClient.fitnessGoal === 'fatLoss' 
+                        ? activeStats.tdee - 450 
+                        : activeClient.fitnessGoal === 'bulk' 
+                          ? activeStats.tdee + 250 
+                          : activeStats.tdee} kcal
+                    </span>
+                    <span className="text-[8px] text-slate-400 block font-mono capitalize">
+                      {activeClient.fitnessGoal === 'fatLoss' ? 'Deficit' : activeClient.fitnessGoal === 'bulk' ? 'Surplus' : 'Maintenance'}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-glass-border text-center space-y-1">
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-mono">Daily Protein Target</span>
+                    <span className="block text-lg font-extrabold text-neonGreen-glow font-mono">
+                      {activeStats.proteinReq}g
+                    </span>
+                    <span className="text-[8px] text-slate-400 block font-mono">
+                      ~ {Math.round(activeStats.proteinReq * 4)} kcal
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-glass-border text-center space-y-1">
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-mono">Daily Water Quota</span>
+                    <span className="block text-lg font-extrabold text-sky-400 font-mono">
+                      {activeStats.waterReq} Liters
+                    </span>
+                    <span className="text-[8px] text-slate-400 block font-mono">
+                      {activeClient.dailyWater}L logged today
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-950/40 p-4 rounded-xl border border-glass-border text-center space-y-1">
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-mono">Metabolic Baseline</span>
+                    <span className="block text-lg font-extrabold text-neonPurple-glow font-mono">
+                      {activeStats.bmr} kcal
+                    </span>
+                    <span className="text-[8px] text-slate-400 block font-mono">
+                      Resting Energy (BMR)
+                    </span>
+                  </div>
+                </div>
+
+                {/* B. What to Do vs What to Ignore */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* What to Do */}
+                  <div className="bg-emerald-500/5 border border-emerald-500/20 p-5 rounded-xl space-y-3">
+                    <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5 font-mono">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>What to Do (Success Guidelines)</span>
+                    </h4>
+                    <ul className="space-y-2.5 text-xs text-slate-300">
+                      {activeClient.fitnessGoal === 'fatLoss' ? (
+                        <>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-emerald-400 font-bold font-mono">✓</span>
+                            <span>Prioritize drinking 3.5L+ of water daily to maximize mitochondrial fat oxidation.</span>
+                          </li>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-emerald-400 font-bold font-mono">✓</span>
+                            <span>Walk 10,000 steps daily (Zone 1/2 activity) to boost calorie deficit without fatiguing.</span>
+                          </li>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-emerald-400 font-bold font-mono">✓</span>
+                            <span>Perform heavy compound lifting (3-4x weekly) to signal your body to retain active lean mass.</span>
+                          </li>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-emerald-400 font-bold font-mono">✓</span>
+                            <span>Aim for 8 hours of sleep to regulate cortisol and stabilize hunger hormones.</span>
+                          </li>
+                        </>
+                      ) : activeClient.fitnessGoal === 'bulk' ? (
+                        <>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-emerald-400 font-bold font-mono">✓</span>
+                            <span>Target progressive overload in the 6-12 rep range to trigger muscle hypertrophy.</span>
+                          </li>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-emerald-400 font-bold font-mono">✓</span>
+                            <span>Maintain a highly controlled caloric surplus of +250 to +300 kcal above maintenance (TDEE).</span>
+                          </li>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-emerald-400 font-bold font-mono">✓</span>
+                            <span>Prioritize sleep compliance (8+ hours) for skeletal repair and protein synthesis.</span>
+                          </li>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-emerald-400 font-bold font-mono">✓</span>
+                            <span>Supplement with 3-5g of high-grade creatine monohydrate to fuel intra-muscular ATP stores.</span>
+                          </li>
+                        </>
+                      ) : (
+                        <>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-emerald-400 font-bold font-mono">✓</span>
+                            <span>Maintain high-protein targets (at least 2.0g per kg of LBM) to rebuild tissue.</span>
+                          </li>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-emerald-400 font-bold font-mono">✓</span>
+                            <span>Perform a balanced routine of heavy weight training and aerobic Zone 2 pacing.</span>
+                          </li>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-emerald-400 font-bold font-mono">✓</span>
+                            <span>Keep moving on rest days (e.g. 30-min walking or dynamic stretching).</span>
+                          </li>
+                          <li className="flex items-start space-x-2">
+                            <span className="text-emerald-400 font-bold font-mono">✓</span>
+                            <span>Focus on whole food sources rather than highly processed meal replacements.</span>
+                          </li>
+                        </>
+                      )}
+                    </ul>
+                  </div>
+
+                  {/* What to Ignore */}
+                  <div className="bg-rose-500/5 border border-rose-500/20 p-5 rounded-xl space-y-3">
+                    <h4 className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center space-x-1.5 font-mono">
+                      <ShieldAlert className="w-4 h-4" />
+                      <span>What to Ignore / Avoid</span>
+                    </h4>
+                    <ul className="space-y-2.5 text-xs text-slate-300">
+                      <li className="flex items-start space-x-2">
+                        <span className="text-rose-400 font-bold font-mono">✗</span>
+                        <span>**Ignore Fad/Crash Diets**: Extreme low-calorie diets cause severe muscle cannibalization and drop BMR.</span>
+                      </li>
+                      <li className="flex items-start space-x-2">
+                        <span className="text-rose-400 font-bold font-mono">✗</span>
+                        <span>**Avoid Liquid Calories**: Skip sodas, juices, and alcohol which spikes insulin and promotes visceral belly fat.</span>
+                      </li>
+                      {activeClient.fitnessGoal === 'bulk' ? (
+                        <li className="flex items-start space-x-2">
+                          <span className="text-rose-400 font-bold font-mono">✗</span>
+                          <span>**Avoid Dirty Bulking**: Consuming mass quantities of fast food triggers excessive fat cell hyperplasia.</span>
+                        </li>
+                      ) : (
+                        <li className="flex items-start space-x-2">
+                          <span className="text-rose-400 font-bold font-mono">✗</span>
+                          <span>**Avoid Skipping Meals**: Leads to severe nutrient deficiency and subsequent binge-eating triggers.</span>
+                        </li>
+                      )}
+                      <li className="flex items-start space-x-2">
+                        <span className="text-rose-400 font-bold font-mono">✗</span>
+                        <span>**Avoid Sitting/Sedentary Blocks**: Take a 5-minute walk for every 2 hours of static screen time.</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* C. Personalized Veg & Non-Veg Meal Options */}
+                <div className="space-y-4 pt-2">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-widest font-mono flex items-center space-x-1.5">
+                    <Flame className="w-4 h-4 text-neonGreen-glow animate-pulse" />
+                    <span>Personalized Meal Plan & Macros (Veg & Non-Veg Options)</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    {/* Breakfast */}
+                    <div className="bg-slate-950/50 p-4.5 rounded-xl border border-glass-border space-y-3">
+                      <span className="text-[10px] font-bold text-neonBlue-glow uppercase tracking-wider font-mono">🌅 Breakfast</span>
+                      <div className="space-y-2.5 text-xs">
+                        <div className="space-y-1">
+                          <strong className="text-[10px] uppercase text-emerald-400 block font-mono">🌿 Veg Option:</strong>
+                          <p className="text-slate-300 leading-relaxed text-[11px]">
+                            {activeClient.fitnessGoal === 'fatLoss' 
+                              ? 'Tofu scramble (150g) with spinach, mushrooms, and 1 tbsp chia seeds.'
+                              : activeClient.fitnessGoal === 'bulk'
+                                ? 'High-protein steel-cut oats with peanut butter, banana, pumpkin seeds, and 1 scoop vegan protein.'
+                                : 'Protein porridge with soy milk, almonds, flaxseeds, and mixed fresh berries.'}
+                          </p>
+                        </div>
+                        <div className="border-t border-slate-800/60 pt-2 space-y-1">
+                          <strong className="text-[10px] uppercase text-rose-400 block font-mono">🍖 Non-Veg Option:</strong>
+                          <p className="text-slate-300 leading-relaxed text-[11px]">
+                            {activeClient.fitnessGoal === 'fatLoss'
+                              ? '3 egg whites + 1 whole egg scrambled omelet loaded with bell peppers and green onions.'
+                              : activeClient.fitnessGoal === 'bulk'
+                                ? '3 whole eggs scrambled + 2 slices of whole wheat sourdough + 1 sliced avocado.'
+                                : 'Scrambled egg whites with smoked salmon (100g) on toasted rye bread.'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Lunch */}
+                    <div className="bg-slate-950/50 p-4.5 rounded-xl border border-glass-border space-y-3">
+                      <span className="text-[10px] font-bold text-neonBlue-glow uppercase tracking-wider font-mono">☀️ Lunch</span>
+                      <div className="space-y-2.5 text-xs">
+                        <div className="space-y-1">
+                          <strong className="text-[10px] uppercase text-emerald-400 block font-mono">🌿 Veg Option:</strong>
+                          <p className="text-slate-300 leading-relaxed text-[11px]">
+                            {activeClient.fitnessGoal === 'fatLoss'
+                              ? 'Pan-seared tempeh (120g) stir-fry with broccoli, baby corn, and 1/2 cup quinoa.'
+                              : activeClient.fitnessGoal === 'bulk'
+                                ? 'High-protein chickpea pasta (100g) with tofu cubes, avocado, and spinach basil pesto.'
+                                : 'Quinoa bowl with black beans, edamame, roasted sweet potatoes, and tahini dressing.'}
+                          </p>
+                        </div>
+                        <div className="border-t border-slate-800/60 pt-2 space-y-1">
+                          <strong className="text-[10px] uppercase text-rose-400 block font-mono">🍖 Non-Veg Option:</strong>
+                          <p className="text-slate-300 leading-relaxed text-[11px]">
+                            {activeClient.fitnessGoal === 'fatLoss'
+                              ? 'Grilled chicken breast (150g) with a large green salad and 1/3 cup wild brown rice.'
+                              : activeClient.fitnessGoal === 'bulk'
+                                ? 'Lean beef steak or turkey burger patty (180g) with double portion jasmine rice.'
+                                : 'Grilled chicken strips (150g) with quinoa pilaf and sautéed mixed greens.'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Snack */}
+                    <div className="bg-slate-950/50 p-4.5 rounded-xl border border-glass-border space-y-3">
+                      <span className="text-[10px] font-bold text-neonBlue-glow uppercase tracking-wider font-mono">🌇 Afternoon Snack</span>
+                      <div className="space-y-2.5 text-xs">
+                        <div className="space-y-1">
+                          <strong className="text-[10px] uppercase text-emerald-400 block font-mono">🌿 Veg Option:</strong>
+                          <p className="text-slate-300 leading-relaxed text-[11px]">
+                            {activeClient.fitnessGoal === 'fatLoss'
+                              ? 'Low-fat grilled paneer cubes (100g) seasoned with black pepper, or 1 scoop protein shake.'
+                              : activeClient.fitnessGoal === 'bulk'
+                                ? 'Roasted chickpeas (1.5 cups) with a handful of raw walnuts and mixed dried fruit.'
+                                : 'Celery and cucumber sticks with 3 tbsp hummus and 15 raw almonds.'}
+                          </p>
+                        </div>
+                        <div className="border-t border-slate-800/60 pt-2 space-y-1">
+                          <strong className="text-[10px] uppercase text-rose-400 block font-mono">🍖 Non-Veg Option:</strong>
+                          <p className="text-slate-300 leading-relaxed text-[11px]">
+                            {activeClient.fitnessGoal === 'fatLoss'
+                              ? 'Oven-roasted turkey breast slices (120g) rolled with cucumber spears.'
+                              : activeClient.fitnessGoal === 'bulk'
+                                ? 'Tuna salad wrap using a whole wheat tortilla and Greek yogurt dressing.'
+                                : 'Hard-boiled eggs (2) with a handful of raw walnuts.'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dinner */}
+                    <div className="bg-slate-950/50 p-4.5 rounded-xl border border-glass-border space-y-3">
+                      <span className="text-[10px] font-bold text-neonBlue-glow uppercase tracking-wider font-mono">🌙 Dinner</span>
+                      <div className="space-y-2.5 text-xs">
+                        <div className="space-y-1">
+                          <strong className="text-[10px] uppercase text-emerald-400 block font-mono">🌿 Veg Option:</strong>
+                          <p className="text-slate-300 leading-relaxed text-[11px]">
+                            {activeClient.fitnessGoal === 'fatLoss'
+                              ? 'Thick lentil & chickpea dahl with grilled asparagus and baked tofu (100g).'
+                              : activeClient.fitnessGoal === 'bulk'
+                                ? 'High-protein paneer bhurji (150g) served with kidney bean chili and brown rice.'
+                                : 'Baked tofu cubes (150g) served with lentil dahl and brown rice.'}
+                          </p>
+                        </div>
+                        <div className="border-t border-slate-800/60 pt-2 space-y-1">
+                          <strong className="text-[10px] uppercase text-rose-400 block font-mono">🍖 Non-Veg Option:</strong>
+                          <p className="text-slate-300 leading-relaxed text-[11px]">
+                            {activeClient.fitnessGoal === 'fatLoss'
+                              ? 'Baked salmon fillet (150g) served with steamed asparagus and broccoli.'
+                              : activeClient.fitnessGoal === 'bulk'
+                                ? 'Baked white fish or chicken breast (200g) with roasted potatoes and green beans.'
+                                : 'Lean grilled pork tenderloin or turkey breast (180g) with roasted asparagus.'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* D. Foods to Ignore completely */}
+                <div className="bg-rose-950/20 border border-rose-900/30 p-4.5 rounded-xl space-y-2">
+                  <span className="text-[10px] font-bold text-rose-400 uppercase tracking-widest font-mono block">⚠️ Nutritional Red Flags (Foods to Ignore Completely)</span>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Minimize all foods containing **trans-fats (hydrogenated oils)**, **high-fructose corn syrup**, **packaged chips/cookies**, **sweetened deep-fried foods**, **refined sugars (sodas, donuts)**, and **processed sodium blocks**. These induce immediate systemic inflammation and disrupt your muscle-building metabolic pathways.
+                  </p>
+                </div>
+              </div>
+
             </div>
           )}
 
