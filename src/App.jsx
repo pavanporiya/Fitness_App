@@ -3,7 +3,7 @@ import {
   Activity, User, Plus, Award, Flame, Droplet, Brain, Scale, 
   Dumbbell, ShieldAlert, CheckCircle2, ChevronRight, Download, 
   Users, TrendingUp, Sparkles, MessageSquare, Moon, RefreshCw, 
-  Layers, Compass, HelpCircle, FileText, ArrowLeftRight, Heart, Trash2
+  Layers, Compass, HelpCircle, FileText, ArrowLeftRight, Heart, Trash2, Navigation
 } from 'lucide-react';
 import { 
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, 
@@ -11,6 +11,213 @@ import {
 } from 'recharts';
 import { calculateAssessment, PRESETS, imperialToMetric } from './utils/fitnessScience';
 import { generateAICoachingReport } from './utils/aiConsultant';
+
+const CUISINE_PLANS = {
+  'western': {
+    name: 'Western / American Style',
+    breakfast: {
+      veg: {
+        fatLoss: 'Tofu scramble (150g) with spinach, mushrooms, and 1 tbsp chia seeds.',
+        bulk: 'High-protein steel-cut oats with peanut butter, banana, pumpkin seeds, and 1 scoop vegan protein.',
+        recomp: 'Protein porridge with soy milk, almonds, flaxseeds, and mixed fresh berries.'
+      },
+      nonVeg: {
+        fatLoss: '3 egg whites + 1 whole egg scrambled omelet loaded with bell peppers and green onions.',
+        bulk: '3 whole eggs scrambled + 2 slices of whole wheat sourdough + 1 sliced avocado.',
+        recomp: 'Scrambled egg whites with smoked salmon (100g) on toasted rye bread.'
+      }
+    },
+    lunch: {
+      veg: {
+        fatLoss: 'Pan-seared tempeh (120g) stir-fry with broccoli, baby corn, and 1/2 cup quinoa.',
+        bulk: 'High-protein chickpea pasta (100g) with tofu cubes, avocado, and spinach basil pesto.',
+        recomp: 'Quinoa bowl with black beans, edamame, roasted sweet potatoes, and tahini dressing.'
+      },
+      nonVeg: {
+        fatLoss: 'Grilled chicken breast (150g) with a large green salad and 1/3 cup wild brown rice.',
+        bulk: 'Lean beef steak or turkey burger patty (180g) with double portion jasmine rice.',
+        recomp: 'Grilled chicken strips (150g) with quinoa pilaf and sautéed mixed greens.'
+      }
+    },
+    snack: {
+      veg: {
+        fatLoss: 'Low-fat grilled paneer cubes (100g) seasoned with black pepper, or 1 scoop protein shake.',
+        bulk: 'Roasted chickpeas (1.5 cups) with a handful of raw walnuts and mixed dried fruit.',
+        recomp: 'Celery and cucumber sticks with 3 tbsp hummus and 15 raw almonds.'
+      },
+      nonVeg: {
+        fatLoss: 'Oven-roasted turkey breast slices (120g) rolled with cucumber spears.',
+        bulk: 'Tuna salad wrap using a whole wheat tortilla and Greek yogurt dressing.',
+        recomp: 'Hard-boiled eggs (2) with a handful of raw walnuts.'
+      }
+    },
+    dinner: {
+      veg: {
+        fatLoss: 'Thick lentil & chickpea dahl with grilled asparagus and baked tofu (100g).',
+        bulk: 'High-protein paneer bhurji (150g) served with kidney bean chili and brown rice.',
+        recomp: 'Baked tofu cubes (150g) served with lentil dahl and brown rice.'
+      },
+      nonVeg: {
+        fatLoss: 'Baked salmon fillet (150g) served with steamed asparagus and broccoli.',
+        bulk: 'Baked white fish or chicken breast (200g) with roasted potatoes and green beans.',
+        recomp: 'Lean grilled pork tenderloin or turkey breast (180g) with roasted asparagus.'
+      }
+    }
+  },
+  'south-asian': {
+    name: 'South Asian / Indian Style',
+    breakfast: {
+      veg: {
+        fatLoss: 'Low-fat paneer bhurji (120g) cooked with tomatoes, turmeric, spinach, and 1 toasted multi-grain roti.',
+        bulk: 'Besan cheela (2 thick pancakes) loaded with chopped paneer, plus a high-protein double-toned milk shake.',
+        recomp: 'Sprouted moong dal salad (1.5 cups) with diced paneer, cucumber, tomatoes, lemon juice, and green coriander.'
+      },
+      nonVeg: {
+        fatLoss: 'Egg white bhurji (4 egg whites) cooked with minimal mustard oil, onions, chilies, and tomatoes.',
+        bulk: 'Double egg omelet rolled inside a whole wheat paratha, plus an almond milk protein shake.',
+        recomp: '3 egg whites scrambled with low-fat paneer, served with roasted dal.'
+      }
+    },
+    lunch: {
+      veg: {
+        fatLoss: 'Soya chunks curry (120g soy) with a bowl of yellow split dal and sautéed french beans.',
+        bulk: 'Thick chickpea Chole curry with paneer cubes, served with a double portion of basmati brown rice.',
+        recomp: 'Moong dal khichdi loaded with green peas, carrots, tofu cubes, and a side of cucumber raita.'
+      },
+      nonVeg: {
+        fatLoss: 'Lean chicken curry (150g breast) in light tomato-gravy, served with 1 multi-grain chapati and okra.',
+        bulk: 'Spicy chicken tikka (180g) or lamb curry, served with basmati rice, dal tadka, and garlic naan.',
+        recomp: 'Fish curry (150g Rohu/Surmai) with brown rice and a side of dry vegetable sabzi.'
+      }
+    },
+    snack: {
+      veg: {
+        fatLoss: 'Roasted chana (1 cup) with black salt, or a low-carb paneer tikka skewer.',
+        bulk: 'Sattu protein shake (4 tbsp roasted chickpea flour in water/milk) with raw walnuts.',
+        recomp: 'A bowl of low-fat curd (yogurt) mixed with chia seeds and raw almonds.'
+      },
+      nonVeg: {
+        fatLoss: 'Chicken seekh kabab (2 skewers) with green mint chutney and lime juices.',
+        bulk: 'Egg bhurji wrap using a thin multi-grain flatbread.',
+        recomp: 'Roasted boiled egg whites (3) sprinkled with chaat masala.'
+      }
+    },
+    dinner: {
+      veg: {
+        fatLoss: 'Tofu/paneer tikka (150g paneer) grilled with bell peppers and onions, plus black chana soup.',
+        bulk: 'Paneer butter masala (using cashew cream) with black whole urad dal makhani and brown rice.',
+        recomp: 'High-protein mixed dal tadka with pan-seared tofu (120g) and baked cauliflower.'
+      },
+      nonVeg: {
+        fatLoss: 'Tandoori grilled chicken breast (180g) served with mint raita and steamed broccoli.',
+        bulk: 'Chicken biryani made with high-protein basmati rice, chicken breast, and egg whites.',
+        recomp: 'Baked fish fillet (150g) in mustard gravy with a bowl of yellow dal.'
+      }
+    }
+  },
+  'mediterranean': {
+    name: 'Mediterranean Style',
+    breakfast: {
+      veg: {
+        fatLoss: 'High-protein fat-free Greek yogurt (200g) with chia seeds, pumpkin seeds, and a handful of blackberries.',
+        bulk: 'Thick Mediterranean shakshuka made with tofu scramble, feta cheese, olives, and toasted sourdough.',
+        recomp: 'Hummus spread on whole grain rye toast with avocado slices and a bowl of sliced cucumbers.'
+      },
+      nonVeg: {
+        fatLoss: 'Shakshuka with 3 egg whites + 1 whole egg poached in tomato sauce with fresh basil.',
+        bulk: 'Mediterranean omelet with feta, spinach, black olives, and 2 slices of toasted sourdough.',
+        recomp: 'Smoked salmon (120g) with Greek yogurt cheese, capers, and whole wheat flatbread.'
+      }
+    },
+    lunch: {
+      veg: {
+        fatLoss: 'Grilled halloumi cheese (100g) with chickpea salad, cherry tomatoes, and cucumber slices in lemon dressing.',
+        bulk: 'Thick falafel & hummus bowl loaded with quinoa, avocado cubes, roasted eggplants, and tahini.',
+        recomp: 'Lentil tabouli salad with cucumber, mint, parsley, baked feta cubes, and olive oil dressing.'
+      },
+      nonVeg: {
+        fatLoss: 'Mediterranean grilled chicken breast (150g) over a large Greek salad with olive oil dressing.',
+        bulk: 'Baked cod or sea bass fillet (180g) served with lemon herb couscous and roasted bell peppers.',
+        recomp: 'Tuna salad (150g tuna) dressed in olive oil, olives, capers, served with warm pita bread.'
+      }
+    },
+    snack: {
+      veg: {
+        fatLoss: 'A handful of kalamata olives with Greek yogurt dip and celery sticks.',
+        bulk: 'Warm pita bread with 4 tbsp classic hummus, raw walnuts, and dried figs.',
+        recomp: 'Roasted pumpkin seeds (1 cup) with a small block of goat cheese.'
+      },
+      nonVeg: {
+        fatLoss: 'Shrimp skewers (4-5 pieces) seasoned with oregano and fresh lemon.',
+        bulk: 'Prosciutto rolled over melon slices + raw walnuts.',
+        recomp: 'Boiled egg whites (3) with a side of hummus.'
+      }
+    },
+    dinner: {
+      veg: {
+        fatLoss: 'Baked eggplant parmigiana made with low-fat mozzarella, served with lentil soup.',
+        bulk: 'Stuffed bell peppers with high-protein quinoa, black beans, pine nuts, and baked feta.',
+        recomp: 'Falafel patties (4) served over warm lentil dahl and garlic broccoli.'
+      },
+      nonVeg: {
+        fatLoss: 'Baked salmon fillet (150g) in garlic herb dressing with asparagus and broccoli.',
+        bulk: 'Grilled octopus or lamb chops (180g) served with double portions of lemon potatoes.',
+        recomp: 'Pan-seared cod fish (150g) in olive tomato caper gravy with wild rice.'
+      }
+    }
+  },
+  'east-asian': {
+    name: 'East Asian / Pacific Style',
+    breakfast: {
+      veg: {
+        fatLoss: 'Silken tofu scramble with green onions, shiitake mushrooms, soy sauce, and sesame oil.',
+        bulk: 'Warm high-protein rice porridge (Congee) topped with marinated edamame, tofu blocks, and sesame seeds.',
+        recomp: 'Miso soup loaded with firm tofu cubes (150g), seaweed, and fresh green bok choy.'
+      },
+      nonVeg: {
+        fatLoss: 'Steamed egg custard made with egg whites, shredded ginger, spring onions, and light soy sauce.',
+        bulk: 'Chicken Congee made with shredded chicken breast (120g), ginger, green onions, and whole wheat toast.',
+        recomp: 'Pan-seared salmon slices (100g) with egg white omelet and spring onions.'
+      }
+    },
+    lunch: {
+      veg: {
+        fatLoss: 'Edamame & tofu stir-fry with broccoli, snap peas, and garlic ginger sauce over 1/2 cup jasmine rice.',
+        bulk: 'High-protein dry ramen noodles with thick tofu katsu, boiled edamame, and soft-boiled egg.',
+        recomp: 'Soba noodle salad with marinated tempeh cubes, peanuts, grated carrots, and sesame ginger dressing.'
+      },
+      nonVeg: {
+        fatLoss: 'Grilled chicken breast Teriyaki (150g) with steamed bok choy and a small bowl of brown rice.',
+        bulk: 'Sweet soy beef sirloin stir-fry (180g) loaded with broccoli, spring onions, and double jasmine rice.',
+        recomp: 'Steamed white fish (150g) with ginger, scallions, soy sauce, and quinoa.'
+      }
+    },
+    snack: {
+      veg: {
+        fatLoss: 'Warm salted edamame pods (1.5 cups), or a scoop of soy protein shake.',
+        bulk: 'Roasted seaweed sheets wrapped with avocado slices and roasted peanuts.',
+        recomp: 'Miso glazed baked eggplant slices with a handful of walnuts.'
+      },
+      nonVeg: {
+        fatLoss: 'Steamed chicken dumplings (4 pieces) with light dipping vinegar.',
+        bulk: 'Crispy fish skin cracklings + unsalted cashews.',
+        recomp: 'Boiled egg whites (3) seasoned with seaweed flakes (Furikake).'
+      }
+    },
+    dinner: {
+      veg: {
+        fatLoss: 'Mapo Tofu (made with soy mince and tofu blocks) with steamed asparagus.',
+        bulk: 'Sweet sesame tempeh stir-fry with cashews, shiitake mushrooms, broccoli, and brown rice.',
+        recomp: 'Teriyaki glazed firm tofu blocks (150g) with baked bok choy and wild black rice.'
+      },
+      nonVeg: {
+        fatLoss: 'Baked cod fish fillet (150g) with steamed broccoli and ginger garlic mushrooms.',
+        bulk: 'Korean BBQ grilled pork belly or lean beef strips (200g) with kimchi and white rice.',
+        recomp: 'Grilled salmon fillet (150g) in sweet soy glaze served with garlic spinach.'
+      }
+    }
+  }
+};
 
 export default function App() {
   // --- WORKSPACE & CLIENT STATE ---
@@ -71,7 +278,9 @@ export default function App() {
     fitnessGoal: 'recomp',
     dailyWater: '2.5',
     sleepHours: '8',
-    experience: 'intermediate'
+    experience: 'intermediate',
+    location: '',
+    cuisinePreference: 'western'
   });
 
   // AI chat states
@@ -197,6 +406,7 @@ export default function App() {
   });
 
   const aiReport = generateAICoachingReport(activeClient, activeStats);
+  const selectedCuisine = CUISINE_PLANS[activeClient.cuisinePreference || 'western'] || CUISINE_PLANS['western'];
 
   // --- DYNAMIC FORM CONVERSIONS ---
   const handleUnitToggle = () => {
@@ -304,6 +514,8 @@ export default function App() {
               dailyWater: Number(formData.dailyWater),
               sleepHours: Number(formData.sleepHours),
               experience: formData.experience,
+              location: formData.location || 'Detected Region',
+              cuisinePreference: formData.cuisinePreference || 'western',
               scansCount: updatedHistory.length,
               scansHistory: updatedHistory
             } : c);
@@ -326,6 +538,8 @@ export default function App() {
               dailyWater: Number(formData.dailyWater),
               sleepHours: Number(formData.sleepHours),
               experience: formData.experience,
+              location: formData.location || 'Detected Region',
+              cuisinePreference: formData.cuisinePreference || 'western',
               scansCount: 1,
               scansHistory: [
                 {
@@ -356,6 +570,116 @@ export default function App() {
         return prev + 1;
       });
     }, 1200);
+  };
+
+  const detectLocationAndCuisine = async () => {
+    // 1. Timezone fallback
+    let detectedLocation = "Global Client";
+    let detectedCuisine = "western";
+
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) {
+        if (tz.includes("Calcutta") || tz.includes("Kolkata") || tz.includes("Delhi") || tz.includes("Mumbai") || tz.includes("Asia/India") || tz.includes("Asia/Colombo") || tz.includes("Asia/Karachi") || tz.includes("Asia/Kathmandu")) {
+          detectedLocation = "South Asia (TZ)";
+          detectedCuisine = "south-asian";
+        } else if (tz.includes("Europe") || tz.includes("Athens") || tz.includes("Rome") || tz.includes("Madrid") || tz.includes("Paris") || tz.includes("London")) {
+          detectedLocation = "Europe (TZ)";
+          detectedCuisine = "mediterranean";
+        } else if (tz.includes("Asia") || tz.includes("Tokyo") || tz.includes("Seoul") || tz.includes("Beijing") || tz.includes("Shanghai") || tz.includes("Singapore") || tz.includes("Bangkok") || tz.includes("Jakarta")) {
+          detectedLocation = "East Asia (TZ)";
+          detectedCuisine = "east-asian";
+        } else {
+          detectedLocation = "Americas (TZ)";
+          detectedCuisine = "western";
+        }
+      }
+    } catch (e) {
+      console.warn("Timezone resolution failed", e);
+    }
+
+    // Update state to timezone fallback first so it's instant!
+    setFormData(prev => ({
+      ...prev,
+      location: prev.location || detectedLocation,
+      cuisinePreference: prev.cuisinePreference || detectedCuisine
+    }));
+
+    // 2. Silent IP Geo Lookup backup
+    try {
+      const ipRes = await fetch('https://ipapi.co/json/');
+      if (ipRes.ok) {
+        const ipData = await ipRes.json();
+        if (ipData && ipData.country_code) {
+          const country = ipData.country_name || ipData.country;
+          const city = ipData.city || "";
+          detectedLocation = city ? `${city}, ${country}` : country;
+          
+          // Map country to regional styles
+          const cc = ipData.country_code.toLowerCase();
+          if (["in", "pk", "bd", "lk", "np", "bt", "mv"].includes(cc)) {
+            detectedCuisine = "south-asian";
+          } else if (["gr", "it", "es", "cy", "tr", "eg", "lb", "sy", "jo", "il", "fr", "pt"].includes(cc)) {
+            detectedCuisine = "mediterranean";
+          } else if (["cn", "jp", "kr", "tw", "hk", "mo", "vn", "th", "my", "sg", "ph", "id"].includes(cc)) {
+            detectedCuisine = "east-asian";
+          } else {
+            detectedCuisine = "western";
+          }
+
+          setFormData(prev => ({
+            ...prev,
+            location: detectedLocation,
+            cuisinePreference: detectedCuisine
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn("IP geolocation fetch failed", e);
+    }
+
+    // 3. High-Precision Browser Geolocation Prompt
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const { latitude, longitude } = position.coords;
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`);
+            if (geoRes.ok) {
+              const geoData = await geoRes.json();
+              if (geoData && geoData.address) {
+                const country = geoData.address.country || "";
+                const city = geoData.address.city || geoData.address.town || geoData.address.state || "";
+                const preciseLoc = city ? `${city}, ${country}` : country;
+
+                // Cuisine mapping based on exact country name or code
+                let preciseCuisine = "western";
+                const cc = (geoData.address.country_code || "").toLowerCase();
+                if (["in", "pk", "bd", "lk", "np", "bt", "mv"].includes(cc)) {
+                  preciseCuisine = "south-asian";
+                } else if (["gr", "it", "es", "cy", "tr", "eg", "lb", "sy", "jo", "il", "fr", "pt"].includes(cc)) {
+                  preciseCuisine = "mediterranean";
+                } else if (["cn", "jp", "kr", "tw", "hk", "mo", "vn", "th", "my", "sg", "ph", "id"].includes(cc)) {
+                  preciseCuisine = "east-asian";
+                }
+
+                setFormData(prev => ({
+                  ...prev,
+                  location: preciseLoc,
+                  cuisinePreference: preciseCuisine
+                }));
+              }
+            }
+          } catch (e) {
+            console.warn("Reverse geocoding failed", e);
+          }
+        },
+        (error) => {
+          console.warn("Browser GPS access denied or timed out", error);
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    }
   };
 
   // --- CHAT CONVERSATION AI LOGIC ---
@@ -470,7 +794,9 @@ export default function App() {
         fitnessGoal: client.fitnessGoal,
         dailyWater: String(client.dailyWater),
         sleepHours: String(client.sleepHours),
-        experience: client.experience
+        experience: client.experience,
+        location: client.location || 'Detected Region',
+        cuisinePreference: client.cuisinePreference || 'western'
       });
     } else {
       // Clear form for brand new client
@@ -487,8 +813,14 @@ export default function App() {
         fitnessGoal: 'recomp',
         dailyWater: '2.5',
         sleepHours: '8',
-        experience: 'intermediate'
+        experience: 'intermediate',
+        location: 'Resolving Location...',
+        cuisinePreference: 'western'
       });
+      // Silent background geolocation trigger
+      setTimeout(() => {
+        detectLocationAndCuisine();
+      }, 50);
     }
     setShowNewClientForm(true);
   };
@@ -1006,6 +1338,47 @@ export default function App() {
                       <option value="beginner">Beginner (Under 1 Year)</option>
                       <option value="intermediate">Intermediate (1-3 Years)</option>
                       <option value="advanced">Advanced (3+ Years Overload)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 4. Global Geolocation & Culinary Profile */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-glass-border pt-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5 flex items-center space-x-1">
+                      <Navigation className="w-3.5 h-3.5 text-neonBlue-glow animate-pulse" />
+                      <span>GPS / IP Physical Location</span>
+                    </label>
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        placeholder="Detecting auto-GPS..."
+                        value={formData.location}
+                        onChange={e => setFormData({...formData, location: e.target.value})}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-4 pr-20 py-2.5 text-xs text-white focus:outline-none focus:border-neonBlue-glow font-mono"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={detectLocationAndCuisine}
+                        className="absolute right-2 top-2 text-[9px] bg-slate-800 border border-slate-700 text-neonBlue-glow hover:text-white px-2 py-1 rounded transition font-mono font-bold uppercase"
+                      >
+                        RE-SCAN GPS
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1.5">Culinary Diet Plan Style</label>
+                    <select 
+                      value={formData.cuisinePreference}
+                      onChange={e => setFormData({...formData, cuisinePreference: e.target.value})}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-neonBlue-glow"
+                    >
+                      <option value="western">🌎 Western / American (Oats, Eggs, Salmon, Steak)</option>
+                      <option value="south-asian">🌿 South Asian / Indian (Paneer, Dal, Tofu Curry, Basmati)</option>
+                      <option value="mediterranean">🥙 Mediterranean / European (Greek Yogurt, Hummus, Salmon, Feta)</option>
+                      <option value="east-asian">🥢 East Asian / Pacific (Tofu, Edamame, Teriyaki, Steamed Fish)</option>
                     </select>
                   </div>
                 </div>
@@ -1633,8 +2006,15 @@ export default function App() {
                   <div className="flex items-center space-x-2.5">
                     <Brain className="w-5 h-5 text-neonBlue-glow animate-pulse-glow" />
                     <div>
-                      <h3 className="text-base font-bold text-white">Client Summary & Dietary Blueprint</h3>
-                      <p className="text-xs text-slate-400">Actionable nutrition protocols, meal allocations, and behavioral guidelines.</p>
+                      <h3 className="text-base font-bold text-white flex flex-wrap items-center gap-2">
+                        <span>Client Summary & Dietary Blueprint</span>
+                        <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono px-2 py-0.5 rounded flex items-center gap-1 font-normal uppercase">
+                          <Navigation className="w-2.5 h-2.5 animate-bounce" /> {activeClient.location || 'Global Client'}
+                        </span>
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        Actionable nutrition protocols mapped to <strong className="text-neonBlue-glow font-mono uppercase">{selectedCuisine.name}</strong> guidelines.
+                      </p>
                     </div>
                   </div>
                   <span className="bg-neonBlue/10 border border-neonBlue-glow text-neonBlue-glow text-[9px] font-mono px-2 py-0.5 rounded font-bold uppercase">
@@ -1797,7 +2177,7 @@ export default function App() {
                 <div className="space-y-4 pt-2">
                   <h4 className="text-xs font-bold text-white uppercase tracking-widest font-mono flex items-center space-x-1.5">
                     <Flame className="w-4 h-4 text-neonGreen-glow animate-pulse" />
-                    <span>Personalized Meal Plan & Macros (Veg & Non-Veg Options)</span>
+                    <span>Personalized Meal Plan & Macros ({selectedCuisine.name})</span>
                   </h4>
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -1808,21 +2188,13 @@ export default function App() {
                         <div className="space-y-1">
                           <strong className="text-[10px] uppercase text-emerald-400 block font-mono">🌿 Veg Option:</strong>
                           <p className="text-slate-300 leading-relaxed text-[11px]">
-                            {activeClient.fitnessGoal === 'fatLoss' 
-                              ? 'Tofu scramble (150g) with spinach, mushrooms, and 1 tbsp chia seeds.'
-                              : activeClient.fitnessGoal === 'bulk'
-                                ? 'High-protein steel-cut oats with peanut butter, banana, pumpkin seeds, and 1 scoop vegan protein.'
-                                : 'Protein porridge with soy milk, almonds, flaxseeds, and mixed fresh berries.'}
+                            {selectedCuisine.breakfast.veg[activeClient.fitnessGoal] || selectedCuisine.breakfast.veg['recomp']}
                           </p>
                         </div>
                         <div className="border-t border-slate-800/60 pt-2 space-y-1">
                           <strong className="text-[10px] uppercase text-rose-400 block font-mono">🍖 Non-Veg Option:</strong>
                           <p className="text-slate-300 leading-relaxed text-[11px]">
-                            {activeClient.fitnessGoal === 'fatLoss'
-                              ? '3 egg whites + 1 whole egg scrambled omelet loaded with bell peppers and green onions.'
-                              : activeClient.fitnessGoal === 'bulk'
-                                ? '3 whole eggs scrambled + 2 slices of whole wheat sourdough + 1 sliced avocado.'
-                                : 'Scrambled egg whites with smoked salmon (100g) on toasted rye bread.'}
+                            {selectedCuisine.breakfast.nonVeg[activeClient.fitnessGoal] || selectedCuisine.breakfast.nonVeg['recomp']}
                           </p>
                         </div>
                       </div>
@@ -1835,21 +2207,13 @@ export default function App() {
                         <div className="space-y-1">
                           <strong className="text-[10px] uppercase text-emerald-400 block font-mono">🌿 Veg Option:</strong>
                           <p className="text-slate-300 leading-relaxed text-[11px]">
-                            {activeClient.fitnessGoal === 'fatLoss'
-                              ? 'Pan-seared tempeh (120g) stir-fry with broccoli, baby corn, and 1/2 cup quinoa.'
-                              : activeClient.fitnessGoal === 'bulk'
-                                ? 'High-protein chickpea pasta (100g) with tofu cubes, avocado, and spinach basil pesto.'
-                                : 'Quinoa bowl with black beans, edamame, roasted sweet potatoes, and tahini dressing.'}
+                            {selectedCuisine.lunch.veg[activeClient.fitnessGoal] || selectedCuisine.lunch.veg['recomp']}
                           </p>
                         </div>
                         <div className="border-t border-slate-800/60 pt-2 space-y-1">
                           <strong className="text-[10px] uppercase text-rose-400 block font-mono">🍖 Non-Veg Option:</strong>
                           <p className="text-slate-300 leading-relaxed text-[11px]">
-                            {activeClient.fitnessGoal === 'fatLoss'
-                              ? 'Grilled chicken breast (150g) with a large green salad and 1/3 cup wild brown rice.'
-                              : activeClient.fitnessGoal === 'bulk'
-                                ? 'Lean beef steak or turkey burger patty (180g) with double portion jasmine rice.'
-                                : 'Grilled chicken strips (150g) with quinoa pilaf and sautéed mixed greens.'}
+                            {selectedCuisine.lunch.nonVeg[activeClient.fitnessGoal] || selectedCuisine.lunch.nonVeg['recomp']}
                           </p>
                         </div>
                       </div>
@@ -1862,21 +2226,13 @@ export default function App() {
                         <div className="space-y-1">
                           <strong className="text-[10px] uppercase text-emerald-400 block font-mono">🌿 Veg Option:</strong>
                           <p className="text-slate-300 leading-relaxed text-[11px]">
-                            {activeClient.fitnessGoal === 'fatLoss'
-                              ? 'Low-fat grilled paneer cubes (100g) seasoned with black pepper, or 1 scoop protein shake.'
-                              : activeClient.fitnessGoal === 'bulk'
-                                ? 'Roasted chickpeas (1.5 cups) with a handful of raw walnuts and mixed dried fruit.'
-                                : 'Celery and cucumber sticks with 3 tbsp hummus and 15 raw almonds.'}
+                            {selectedCuisine.snack.veg[activeClient.fitnessGoal] || selectedCuisine.snack.veg['recomp']}
                           </p>
                         </div>
                         <div className="border-t border-slate-800/60 pt-2 space-y-1">
                           <strong className="text-[10px] uppercase text-rose-400 block font-mono">🍖 Non-Veg Option:</strong>
                           <p className="text-slate-300 leading-relaxed text-[11px]">
-                            {activeClient.fitnessGoal === 'fatLoss'
-                              ? 'Oven-roasted turkey breast slices (120g) rolled with cucumber spears.'
-                              : activeClient.fitnessGoal === 'bulk'
-                                ? 'Tuna salad wrap using a whole wheat tortilla and Greek yogurt dressing.'
-                                : 'Hard-boiled eggs (2) with a handful of raw walnuts.'}
+                            {selectedCuisine.snack.nonVeg[activeClient.fitnessGoal] || selectedCuisine.snack.nonVeg['recomp']}
                           </p>
                         </div>
                       </div>
@@ -1889,21 +2245,13 @@ export default function App() {
                         <div className="space-y-1">
                           <strong className="text-[10px] uppercase text-emerald-400 block font-mono">🌿 Veg Option:</strong>
                           <p className="text-slate-300 leading-relaxed text-[11px]">
-                            {activeClient.fitnessGoal === 'fatLoss'
-                              ? 'Thick lentil & chickpea dahl with grilled asparagus and baked tofu (100g).'
-                              : activeClient.fitnessGoal === 'bulk'
-                                ? 'High-protein paneer bhurji (150g) served with kidney bean chili and brown rice.'
-                                : 'Baked tofu cubes (150g) served with lentil dahl and brown rice.'}
+                            {selectedCuisine.dinner.veg[activeClient.fitnessGoal] || selectedCuisine.dinner.veg['recomp']}
                           </p>
                         </div>
                         <div className="border-t border-slate-800/60 pt-2 space-y-1">
                           <strong className="text-[10px] uppercase text-rose-400 block font-mono">🍖 Non-Veg Option:</strong>
                           <p className="text-slate-300 leading-relaxed text-[11px]">
-                            {activeClient.fitnessGoal === 'fatLoss'
-                              ? 'Baked salmon fillet (150g) served with steamed asparagus and broccoli.'
-                              : activeClient.fitnessGoal === 'bulk'
-                                ? 'Baked white fish or chicken breast (200g) with roasted potatoes and green beans.'
-                                : 'Lean grilled pork tenderloin or turkey breast (180g) with roasted asparagus.'}
+                            {selectedCuisine.dinner.nonVeg[activeClient.fitnessGoal] || selectedCuisine.dinner.nonVeg['recomp']}
                           </p>
                         </div>
                       </div>

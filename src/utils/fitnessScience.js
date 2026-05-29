@@ -208,6 +208,8 @@ export const PRESETS = [
     dailyWater: 3.2,
     sleepHours: 8,
     experience: "advanced",
+    location: "Miami, US",
+    cuisinePreference: "western",
     scansCount: 4,
     scansHistory: [
       { date: "2026-02-01", weight: 91.2, bodyFat: 19.8, fitnessScore: 76 },
@@ -233,6 +235,8 @@ export const PRESETS = [
     dailyWater: 2.1,
     sleepHours: 7,
     experience: "intermediate",
+    location: "London, UK",
+    cuisinePreference: "mediterranean",
     scansCount: 3,
     scansHistory: [
       { date: "2026-03-15", weight: 66.8, bodyFat: 26.5, fitnessScore: 71 },
@@ -257,6 +261,8 @@ export const PRESETS = [
     dailyWater: 4.0,
     sleepHours: 9,
     experience: "advanced",
+    location: "Singapore",
+    cuisinePreference: "east-asian",
     scansCount: 2,
     scansHistory: [
       { date: "2026-04-01", weight: 72.5, bodyFat: 11.2, fitnessScore: 86 },
