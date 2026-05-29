@@ -13,21 +13,41 @@ import { calculateAssessment, PRESETS, imperialToMetric } from './utils/fitnessS
 import { generateAICoachingReport } from './utils/aiConsultant';
 
 export default function App() {
-  // --- STATE ---
+  // --- WORKSPACE & CLIENT STATE ---
+  const [workspaceId, setWorkspaceId] = useState(() => {
+    return localStorage.getItem('fitscan_active_workspace') || 'default';
+  });
+
   const [clients, setClients] = useState(() => {
-    const saved = localStorage.getItem('fitscan_clients');
+    const wId = localStorage.getItem('fitscan_active_workspace') || 'default';
+    const saved = localStorage.getItem(`fitscan_clients_${wId}`);
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { return PRESETS; }
+      try { return JSON.parse(saved); } catch (e) { return wId === 'default' ? PRESETS : []; }
     }
-    return PRESETS;
+    return wId === 'default' ? PRESETS : [];
   });
   
-  const [activeClientId, setActiveClientId] = useState(PRESETS[0].id);
+  const [activeClientId, setActiveClientId] = useState(() => {
+    const wId = localStorage.getItem('fitscan_active_workspace') || 'default';
+    const saved = localStorage.getItem(`fitscan_clients_${wId}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.length > 0 ? parsed[0].id : '';
+      } catch (e) { return 'preset-alex'; }
+    }
+    return 'preset-alex';
+  });
+
   const [isScanning, setIsScanning] = useState(false);
   const [scanStep, setScanStep] = useState(0);
   const [showNewClientForm, setShowNewClientForm] = useState(false);
   const [unitSystem, setUnitSystem] = useState('metric'); // metric (kg, cm, cm) | imperial (lbs, in, in)
   
+  // Workspace Switcher Modal States
+  const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
+  const [workspaceInput, setWorkspaceInput] = useState(workspaceId);
+
   // Tab control: 'dashboard' | 'trainer' | 'ai-coach' | 'comparison'
   const [activeTab, setActiveTab] = useState('dashboard');
   
@@ -35,7 +55,7 @@ export default function App() {
   const [activeCoachTab, setActiveCoachTab] = useState('fitness');
   
   // Client selection for comparison
-  const [compareClientIds, setCompareClientIds] = useState([PRESETS[0].id, PRESETS[1].id]);
+  const [compareClientIds, setCompareClientIds] = useState([]);
 
   // Form State for new scan / new client
   const [formData, setFormData] = useState({
@@ -63,13 +83,101 @@ export default function App() {
   ]);
   const [chatInput, setChatInput] = useState('');
 
-  // --- LOCALSTORAGE PERSISTENCE ---
+  // --- LOCALSTORAGE PERSISTENCE (Workspace Scoped) ---
   useEffect(() => {
-    localStorage.setItem('fitscan_clients', JSON.stringify(clients));
+    localStorage.setItem(`fitscan_clients_${workspaceId}`, JSON.stringify(clients));
+  }, [clients, workspaceId]);
+
+  // Load clients dynamically on workspace changes
+  useEffect(() => {
+    const saved = localStorage.getItem(`fitscan_clients_${workspaceId}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setClients(parsed);
+        if (parsed.length > 0) {
+          setActiveClientId(parsed[0].id);
+        } else {
+          setActiveClientId('');
+        }
+      } catch (e) {
+        setClients([]);
+        setActiveClientId('');
+      }
+    } else {
+      const initial = workspaceId === 'default' ? PRESETS : [];
+      setClients(initial);
+      if (initial.length > 0) {
+        setActiveClientId(initial[0].id);
+      } else {
+        setActiveClientId('');
+      }
+    }
+  }, [workspaceId]);
+
+  // Align comparison array automatically on client adjustments
+  useEffect(() => {
+    if (clients.length >= 2) {
+      setCompareClientIds([clients[0].id, clients[1].id]);
+    } else if (clients.length === 1) {
+      setCompareClientIds([clients[0].id]);
+    } else {
+      setCompareClientIds([]);
+    }
   }, [clients]);
 
+  // --- JSON DATABASE BACKUPS ---
+  const handleExportDatabase = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(clients, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `fitscan_db_${workspaceId}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleImportDatabase = (e) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const fileReader = new FileReader();
+    fileReader.readAsText(e.target.files[0], "UTF-8");
+    fileReader.onload = event => {
+      try {
+        const parsed = JSON.parse(event.target.result);
+        if (Array.isArray(parsed)) {
+          setClients(parsed);
+          if (parsed.length > 0) {
+            setActiveClientId(parsed[0].id);
+          }
+          alert("Workspace client database loaded successfully!");
+        } else {
+          alert("Invalid file structure. Must be a JSON array of clients.");
+        }
+      } catch (err) {
+        alert("Failed to parse the uploaded database file.");
+      }
+    };
+  };
+
   // --- RETRIEVE ACTIVE CLIENT ---
-  const activeClient = clients.find(c => c.id === activeClientId) || clients[0] || PRESETS[0];
+  const activeClient = clients.find(c => c.id === activeClientId) || clients[0] || {
+    id: "empty",
+    name: "No Active Client",
+    age: 30,
+    gender: "male",
+    weight: 70,
+    height: 175,
+    waist: 80,
+    neck: 36,
+    hip: 90,
+    activityLevel: "moderate",
+    fitnessGoal: "recomp",
+    dailyWater: 2.0,
+    sleepHours: 8,
+    experience: "beginner",
+    scansCount: 0,
+    scansHistory: []
+  };
 
   // --- CONVERT CURRENT CLIENT TO METRIC STATS FOR CALC ENGINE ---
   const activeStats = calculateAssessment({
@@ -560,7 +668,35 @@ export default function App() {
         
         {/* --- CLIENT SELECTOR SIDEBAR (Visible for quick switches on large screens) --- */}
         <aside className="no-print w-full lg:w-72 border-r border-glass-border glass-card p-4 flex flex-col space-y-4 shrink-0 lg:max-h-[calc(100vh-73px)] overflow-y-auto">
-          <div className="flex items-center justify-between">
+          
+          {/* --- WORKSPACE SELECTION CARD --- */}
+          <div className="bg-slate-900/60 p-3 rounded-xl border border-glass-border space-y-2">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-1.5">
+                <Layers className="w-3.5 h-3.5 text-neonBlue-glow" />
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Workspace ID</span>
+              </div>
+              <button 
+                onClick={() => {
+                  setWorkspaceInput(workspaceId);
+                  setShowWorkspaceModal(true);
+                }}
+                className="text-[9px] font-mono text-neonBlue-glow hover:underline uppercase font-bold"
+              >
+                Change
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white capitalize truncate pr-2">
+                🏢 {workspaceId === 'default' ? 'Global Default' : workspaceId}
+              </span>
+              <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-mono font-bold uppercase">
+                {clients.length} Clients
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">GYM CLIENT BASE</span>
             <span className="bg-slate-800 text-slate-300 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">LIVE SYNC</span>
           </div>
@@ -893,8 +1029,27 @@ export default function App() {
             </div>
           )}
 
+          {/* --- WORKSPACE EMPTY ONBOARDING STATE --- */}
+          {clients.length === 0 && !showNewClientForm && (
+            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 max-w-md mx-auto select-none animate-fadeIn">
+              <div className="p-4 bg-slate-900 border border-glass-border rounded-full animate-pulse-glow">
+                <Users className="w-12 h-12 text-neonBlue-glow" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Active Workspace is Empty</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Workspace <code className="bg-slate-800 px-1.5 py-0.5 rounded text-neonBlue-glow font-mono">"{workspaceId}"</code> does not hold any client body composition profiles yet. Click below to execute your first clinical gym scan!
+              </p>
+              <button
+                onClick={() => handleOpenScanForm(null)}
+                className="bg-neonBlue hover:bg-neonBlue-light text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-md glow-border-blue transition"
+              >
+                Create First Client Scan
+              </button>
+            </div>
+          )}
+
           {/* --- TAB VIEW 1: CLIENT ASSESSMENT REPORT (DASHBOARD) --- */}
-          {activeTab === 'dashboard' && !showNewClientForm && (
+          {activeTab === 'dashboard' && !showNewClientForm && clients.length > 0 && (
             <div className="space-y-6">
               
               {/* --- ACTION HEADER ROW --- */}
@@ -1476,7 +1631,7 @@ export default function App() {
           )}
 
           {/* --- TAB VIEW 2: TRAINER HUB TERMINAL (MULTIPLE CLIENTS OVERVIEW) --- */}
-          {activeTab === 'trainer' && (
+          {activeTab === 'trainer' && clients.length > 0 && (
             <div className="space-y-6 select-none">
               
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900/40 p-4 rounded-xl border border-glass-border glass-card">
@@ -1594,7 +1749,7 @@ export default function App() {
           )}
 
           {/* --- TAB VIEW 3: COMPOSITE CLIENTS COMPARISON TAB --- */}
-          {activeTab === 'comparison' && (
+          {activeTab === 'comparison' && clients.length > 0 && (
             <div className="space-y-6 select-none">
               
               <div className="bg-slate-900/40 p-4 rounded-xl border border-glass-border glass-card">
@@ -1727,7 +1882,7 @@ export default function App() {
           )}
 
           {/* --- TAB VIEW 4: AI SPORTS SCIENTIST CHAT DESK --- */}
-          {activeTab === 'ai-coach' && (
+          {activeTab === 'ai-coach' && clients.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 select-none">
               
               {/* Left Bar: Active Client Summary for AI */}
@@ -1847,6 +2002,98 @@ export default function App() {
           </span>
         </div>
       </footer>
+
+      {/* --- WORKSPACE CONFIGURATION MODAL --- */}
+      {showWorkspaceModal && (
+        <div className="fixed inset-0 z-50 bg-obsidian bg-opacity-85 flex items-center justify-center p-6 backdrop-blur-md animate-fadeIn">
+          <div className="max-w-md w-full bg-zinc-900 border border-glass-border p-6 rounded-2xl glass-card relative shadow-2xl">
+            <button 
+              onClick={() => setShowWorkspaceModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white text-xs font-mono border border-slate-800 px-2 py-0.5 rounded"
+            >
+              CLOSE
+            </button>
+
+            <div className="flex items-center space-x-2.5 mb-4">
+              <Layers className="w-5 h-5 text-neonBlue-glow animate-pulse" />
+              <div>
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Gym Workspace Isolation</h3>
+                <p className="text-[10px] text-slate-400 font-mono">Configure separated databases on the same URL</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed mb-4">
+              If multiple gym owners or personal trainers access this app, enter a unique identifier (e.g. <code className="bg-slate-800 text-neonBlue-glow px-1 rounded">golds_gym_la</code>) to create an isolated workspace. Your client base and scans will be stored independently under this ID.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">Enter Workspace ID</label>
+                <input 
+                  type="text" 
+                  value={workspaceInput}
+                  onChange={e => setWorkspaceInput(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                  placeholder="e.g. elite_performance"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-neonBlue-glow font-mono"
+                />
+                <span className="text-[8px] text-slate-500 font-mono mt-1 block">Only letters, numbers, hyphens, and underscores are allowed.</span>
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  onClick={() => {
+                    const cleanId = workspaceInput.trim() || 'default';
+                    setWorkspaceId(cleanId);
+                    localStorage.setItem('fitscan_active_workspace', cleanId);
+                    setShowWorkspaceModal(false);
+                  }}
+                  className="flex-1 bg-gradient-to-r from-neonBlue-light to-neonBlue-glow text-white font-bold py-2 rounded-xl text-xs uppercase tracking-wider transition"
+                >
+                  Activate Workspace
+                </button>
+                <button
+                  onClick={() => {
+                    setWorkspaceId('default');
+                    localStorage.setItem('fitscan_active_workspace', 'default');
+                    setShowWorkspaceModal(false);
+                  }}
+                  className="bg-slate-800 text-slate-300 hover:text-white font-bold px-4 py-2 rounded-xl text-xs uppercase transition"
+                >
+                  Reset Default
+                </button>
+              </div>
+
+              <div className="border-t border-glass-border pt-4 mt-2 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">Database Backups</span>
+                  <span className="text-[9px] bg-slate-800 text-neonGreen-glow px-1.5 py-0.5 rounded font-mono font-bold">100% SECURE</span>
+                </div>
+
+                <div className="flex gap-2">
+                  <button 
+                    type="button"
+                    onClick={handleExportDatabase}
+                    className="flex-1 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 py-2 rounded-lg text-[10px] font-bold tracking-wider uppercase transition flex items-center justify-center space-x-1"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>Backup Database</span>
+                  </button>
+                  <label className="flex-1 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 py-2 rounded-lg text-[10px] font-bold tracking-wider uppercase transition flex items-center justify-center space-x-1 cursor-pointer text-center">
+                    <Plus className="w-3 h-3" />
+                    <span>Restore Data</span>
+                    <input 
+                      type="file" 
+                      accept=".json" 
+                      onChange={handleImportDatabase} 
+                      className="hidden" 
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
