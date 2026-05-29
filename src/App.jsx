@@ -283,6 +283,61 @@ export default function App() {
     cuisinePreference: 'western'
   });
 
+  // Enterprise & Sharing States
+  const [workspacesLedger, setWorkspacesLedger] = useState(() => {
+    const saved = localStorage.getItem('fitscan_workspaces_ledger');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [
+      { id: "default", name: "Global Default Gym", trainer: "Head Coach", location: "Miami, US", cuisine: "western", active: true },
+      { id: "golds_gym_la", name: "Gold's Gym - Los Angeles", trainer: "Alex Rivera", location: "California, US", cuisine: "western", active: false }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('fitscan_workspaces_ledger', JSON.stringify(workspacesLedger));
+  }, [workspacesLedger]);
+
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareClientId, setShareClientId] = useState('');
+
+  // Simulated Cloud Sync states
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+  const [syncStep, setSyncStep] = useState(0);
+  const [syncLogs, setSyncLogs] = useState([]);
+  const [lastSyncTimestamp, setLastSyncTimestamp] = useState(() => {
+    return localStorage.getItem('fitscan_last_sync_timestamp') || 'Never Synced';
+  });
+
+  const triggerCloudSync = () => {
+    if (isSyncingCloud) return;
+    setIsSyncingCloud(true);
+    setSyncStep(0);
+    setSyncLogs(["[SYS] Initiating TLS handshake with FitScan Core Node..."]);
+
+    const steps = [
+      { delay: 1000, msg: "[CONN] Authenticating trainer credentials via OAuth2 secure endpoint..." },
+      { delay: 2000, msg: "[VAL] Serializing client biometric models and baseline TDEE parameters..." },
+      { delay: 3000, msg: "[SEC] Encrypting active dataset payload with AES-256-GCM architecture..." },
+      { delay: 4000, msg: "[PUSH] Synchronizing local SQLite nodes with AWS Enterprise primary storage..." },
+      { delay: 5000, msg: "[SUCCESS] Cloud synchronization confirmed! Node integrity: 100%" }
+    ];
+
+    steps.forEach((step, idx) => {
+      setTimeout(() => {
+        setSyncStep(idx + 1);
+        setSyncLogs(prev => [...prev, step.msg]);
+        if (idx === steps.length - 1) {
+          const timestamp = new Date().toLocaleString();
+          setLastSyncTimestamp(timestamp);
+          localStorage.setItem('fitscan_last_sync_timestamp', timestamp);
+          setIsSyncingCloud(false);
+        }
+      }, step.delay);
+    });
+  };
+
   // AI chat states
   const [fitnessChatMessages, setFitnessChatMessages] = useState([
     { sender: 'coach', text: "Welcome to the Elite Performance Lab! I am your AI Body Composition Coach. Ask me anything about your muscular distribution, genetic ceiling, progressive overload, or target athletic weight." }
@@ -1442,7 +1497,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 no-print">
                   <button 
                     onClick={() => handleOpenScanForm(activeClient)}
                     className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition"
@@ -1457,6 +1512,17 @@ export default function App() {
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Print InBody Report</span>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      setShareClientId(activeClient.id);
+                      setShowShareModal(true);
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold flex items-center space-x-1.5 shadow-md transition"
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                    <span>Share Report</span>
                   </button>
                 </div>
               </div>
@@ -2644,10 +2710,10 @@ export default function App() {
         </div>
       </footer>
 
-      {/* --- WORKSPACE CONFIGURATION MODAL --- */}
+      {/* --- WORKSPACE / MULTI-TRAINER ENTERPRISE TERMINAL --- */}
       {showWorkspaceModal && (
-        <div className="fixed inset-0 z-50 bg-obsidian bg-opacity-85 flex items-center justify-center p-6 backdrop-blur-md animate-fadeIn">
-          <div className="max-w-md w-full bg-zinc-900 border border-glass-border p-6 rounded-2xl glass-card relative shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-obsidian bg-opacity-85 flex items-center justify-center p-6 backdrop-blur-md animate-fadeIn no-print">
+          <div className="max-w-xl w-full bg-zinc-900 border border-glass-border p-6 rounded-2xl glass-card relative shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
             <button 
               onClick={() => setShowWorkspaceModal(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-white text-xs font-mono border border-slate-800 px-2 py-0.5 rounded"
@@ -2655,82 +2721,391 @@ export default function App() {
               CLOSE
             </button>
 
-            <div className="flex items-center space-x-2.5 mb-4">
+            <div className="flex items-center space-x-2.5 pb-2 border-b border-glass-border">
               <Layers className="w-5 h-5 text-neonBlue-glow animate-pulse" />
               <div>
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Gym Workspace Isolation</h3>
-                <p className="text-[10px] text-slate-400 font-mono">Configure separated databases on the same URL</p>
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Multi-Trainer Enterprise Terminal</h3>
+                <p className="text-[10px] text-slate-400 font-mono">Manage branch nodes, isolated databases, and cloud node sync.</p>
               </div>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed mb-4">
-              If multiple gym owners or personal trainers access this app, enter a unique identifier (e.g. <code className="bg-slate-800 text-neonBlue-glow px-1 rounded">golds_gym_la</code>) to create an isolated workspace. Your client base and scans will be stored independently under this ID.
-            </p>
+            {/* A. Active Workspaces Ledger */}
+            <div className="space-y-3">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Registered Gym Branch Nodes</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {workspacesLedger.map((node) => {
+                  const isActive = workspaceId === node.id;
+                  return (
+                    <div 
+                      key={node.id}
+                      onClick={() => {
+                        if (isActive) return;
+                        setWorkspaceId(node.id);
+                        localStorage.setItem('fitscan_active_workspace', node.id);
+                        // Reload data instantly
+                        const saved = localStorage.getItem(`fitscan_clients_${node.id}`);
+                        if (saved) {
+                          try {
+                            const parsed = JSON.parse(saved);
+                            setClients(parsed);
+                            if (parsed.length > 0) setActiveClientId(parsed[0].id);
+                          } catch (e) {
+                            setClients(node.id === 'default' ? PRESETS : []);
+                          }
+                        } else {
+                          setClients(node.id === 'default' ? PRESETS : []);
+                        }
+                        setShowWorkspaceModal(false);
+                      }}
+                      className={`p-3.5 rounded-xl border transition cursor-pointer text-left relative flex flex-col justify-between ${
+                        isActive 
+                          ? 'bg-neonBlue/10 border-neonBlue border-2 shadow-[0_0_15px_rgba(0,210,255,0.15)]' 
+                          : 'bg-slate-950/40 border-glass-border hover:bg-slate-900/60 hover:border-slate-800'
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-start">
+                          <strong className="text-xs text-white block">{node.name}</strong>
+                          {isActive && (
+                            <span className="bg-neonBlue/20 border border-neonBlue-glow text-neonBlue-glow text-[7px] font-mono px-1 rounded font-bold uppercase animate-pulse">
+                              ACTIVE NODE
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[9px] text-slate-400 block font-mono">Trainer: {node.trainer}</span>
+                        <span className="text-[9px] text-slate-500 block font-mono">Location: {node.location || 'Global'}</span>
+                      </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">Enter Workspace ID</label>
-                <input 
-                  type="text" 
-                  value={workspaceInput}
-                  onChange={e => setWorkspaceInput(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
-                  placeholder="e.g. elite_performance"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-neonBlue-glow font-mono"
-                />
-                <span className="text-[8px] text-slate-500 font-mono mt-1 block">Only letters, numbers, hyphens, and underscores are allowed.</span>
+                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/60">
+                        <span className="text-[8px] bg-slate-800/80 text-neonGreen font-mono px-1.5 py-0.5 rounded capitalize">
+                          {node.cuisine || 'Western'} Cuisine
+                        </span>
+                        {node.id !== 'default' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Delete branch database "${node.name}" completely? This action is irreversible.`)) {
+                                const remaining = workspacesLedger.filter(w => w.id !== node.id);
+                                setWorkspacesLedger(remaining);
+                                localStorage.removeItem(`fitscan_clients_${node.id}`);
+                                if (isActive) {
+                                  setWorkspaceId('default');
+                                  localStorage.setItem('fitscan_active_workspace', 'default');
+                                  setClients(PRESETS);
+                                  setActiveClientId(PRESETS[0].id);
+                                }
+                              }
+                            }}
+                            className="text-rose-400 hover:text-rose-300 text-[9px] font-mono px-1.5 py-0.5 rounded border border-rose-900/30 bg-rose-950/10 transition"
+                          >
+                            Purge
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+            </div>
 
-              <div className="pt-2 flex gap-2">
-                <button
-                  onClick={() => {
-                    const cleanId = workspaceInput.trim() || 'default';
-                    setWorkspaceId(cleanId);
-                    localStorage.setItem('fitscan_active_workspace', cleanId);
-                    setShowWorkspaceModal(false);
-                  }}
-                  className="flex-1 bg-gradient-to-r from-neonBlue-light to-neonBlue-glow text-white font-bold py-2 rounded-xl text-xs uppercase tracking-wider transition"
-                >
-                  Activate Workspace
-                </button>
-                <button
-                  onClick={() => {
-                    setWorkspaceId('default');
-                    localStorage.setItem('fitscan_active_workspace', 'default');
-                    setShowWorkspaceModal(false);
-                  }}
-                  className="bg-slate-800 text-slate-300 hover:text-white font-bold px-4 py-2 rounded-xl text-xs uppercase transition"
-                >
-                  Reset Default
-                </button>
-              </div>
-
-              <div className="border-t border-glass-border pt-4 mt-2 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-mono text-slate-400 uppercase">Database Backups</span>
-                  <span className="text-[9px] bg-slate-800 text-neonGreen-glow px-1.5 py-0.5 rounded font-mono font-bold">100% SECURE</span>
+            {/* B. Simulated Cloud Sync Panel */}
+            <div className="bg-slate-950/50 p-4.5 rounded-xl border border-glass-border space-y-3">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-1.5">
+                  <span className="w-2 h-2 bg-neonGreen-glow rounded-full animate-ping" />
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Enterprise Cloud Node Sync</span>
                 </div>
+                <span className="text-[8px] text-slate-500 font-mono">LAST SYNC: {lastSyncTimestamp}</span>
+              </div>
 
-                <div className="flex gap-2">
-                  <button 
-                    type="button"
-                    onClick={handleExportDatabase}
-                    className="flex-1 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 py-2 rounded-lg text-[10px] font-bold tracking-wider uppercase transition flex items-center justify-center space-x-1"
+              {isSyncingCloud ? (
+                <div className="bg-black/90 rounded-xl p-3 font-mono text-[9px] text-emerald-400 space-y-1.5 border border-emerald-500/20 max-h-36 overflow-y-auto">
+                  {syncLogs.map((log, idx) => (
+                    <div key={idx} className="animate-fadeIn">{log}</div>
+                  ))}
+                  <div className="flex items-center space-x-1.5 pt-1.5 border-t border-emerald-950/40">
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
+                    <span className="text-emerald-500">Sync Pipeline Status: Step {syncStep} of 5...</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-3 items-center">
+                  <button
+                    onClick={triggerCloudSync}
+                    className="flex-1 bg-gradient-to-r from-neonGreen-light to-neonGreen-glow text-white font-bold py-2 rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-emerald-950/40"
                   >
-                    <Download className="w-3 h-3" />
-                    <span>Backup Database</span>
+                    Sync Node database to Cloud
                   </button>
-                  <label className="flex-1 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 py-2 rounded-lg text-[10px] font-bold tracking-wider uppercase transition flex items-center justify-center space-x-1 cursor-pointer text-center">
-                    <Plus className="w-3 h-3" />
-                    <span>Restore Data</span>
-                    <input 
-                      type="file" 
-                      accept=".json" 
-                      onChange={handleImportDatabase} 
-                      className="hidden" 
-                    />
-                  </label>
+                  <span className="text-[9px] text-slate-400 font-mono w-24 text-center leading-tight">
+                    Secure TLS/SSL GCM Handshake
+                  </span>
                 </div>
+              )}
+            </div>
+
+            {/* C. Create New Branch Node Form */}
+            <div className="bg-slate-950/30 p-4.5 rounded-xl border border-glass-border space-y-4">
+              <span className="text-[10px] font-bold text-white uppercase tracking-widest font-mono block">Initialize New Gym Branch Node</span>
+              
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const form = e.target;
+                  const nodeName = form.nodeName.value.trim();
+                  const nodeTrainer = form.nodeTrainer.value.trim();
+                  const nodeLocation = form.nodeLocation.value.trim();
+                  const nodeCuisine = form.nodeCuisine.value;
+                  const nodeCleanId = nodeName.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+
+                  if (!nodeName || !nodeTrainer) {
+                    alert("Please fill all node parameters.");
+                    return;
+                  }
+
+                  if (workspacesLedger.some(w => w.id === nodeCleanId)) {
+                    alert("A branch with this name already exists. Please choose a unique name.");
+                    return;
+                  }
+
+                  const newNode = {
+                    id: nodeCleanId,
+                    name: nodeName,
+                    trainer: nodeTrainer,
+                    location: nodeLocation || 'Global',
+                    cuisine: nodeCuisine
+                  };
+
+                  const updated = [...workspacesLedger, newNode];
+                  setWorkspacesLedger(updated);
+                  form.reset();
+                  alert(`Branch Node "${nodeName}" initialized successfully! Select it in the ledger to begin scanning.`);
+                }}
+                className="grid grid-cols-2 gap-4 text-left text-xs"
+              >
+                <div>
+                  <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">Branch / Gym Name</label>
+                  <input 
+                    name="nodeName"
+                    type="text" 
+                    placeholder="e.g. Gold's Gym - Miami"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-white focus:outline-none focus:border-neonBlue-glow font-mono text-[11px]"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">Trainer In-Charge</label>
+                  <input 
+                    name="nodeTrainer"
+                    type="text" 
+                    placeholder="e.g. Coach Rivera"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-white focus:outline-none focus:border-neonBlue-glow font-mono text-[11px]"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">Gym Physical Location</label>
+                  <input 
+                    name="nodeLocation"
+                    type="text" 
+                    placeholder="e.g. Florida, US"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-white focus:outline-none focus:border-neonBlue-glow font-mono text-[11px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[8px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">Primary Culinary Cuisine</label>
+                  <select 
+                    name="nodeCuisine"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-2 text-white focus:outline-none focus:border-neonBlue-glow text-[11px]"
+                  >
+                    <option value="western">Western / American</option>
+                    <option value="south-asian">South Asian / Indian</option>
+                    <option value="mediterranean">Mediterranean / European</option>
+                    <option value="east-asian">East Asian / Pacific</option>
+                  </select>
+                </div>
+
+                <div className="col-span-2 pt-2">
+                  <button 
+                    type="submit"
+                    className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold py-2 rounded-lg text-xs uppercase tracking-wider transition border border-slate-700"
+                  >
+                    Initialize Gym Branch Node
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* D. Backup / Restore Actions */}
+            <div className="border-t border-glass-border pt-4 mt-2 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-mono text-slate-400 uppercase">Local Database Control Node</span>
+                <span className="text-[8px] bg-slate-800 text-neonGreen-glow px-1.5 py-0.5 rounded font-mono font-bold">100% SECURE BACKUP</span>
               </div>
+
+              <div className="flex gap-2">
+                <button 
+                  type="button"
+                  onClick={handleExportDatabase}
+                  className="flex-1 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-200 py-2 rounded-lg text-[10px] font-bold tracking-wider uppercase transition flex items-center justify-center space-x-1"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Backup Ledger</span>
+                </button>
+                <label className="flex-1 bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-200 py-2 rounded-lg text-[10px] font-bold tracking-wider uppercase transition flex items-center justify-center space-x-1 cursor-pointer text-center">
+                  <Plus className="w-3 h-3" />
+                  <span>Restore Ledger</span>
+                  <input 
+                    type="file" 
+                    accept=".json" 
+                    onChange={handleImportDatabase} 
+                    className="hidden" 
+                  />
+                </label>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* --- CLIENT REPORT DISTRIBUTION TERMINAL (SHARE MODAL) --- */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 bg-obsidian bg-opacity-85 flex items-center justify-center p-6 backdrop-blur-md animate-fadeIn no-print">
+          <div className="max-w-md w-full bg-zinc-900 border border-glass-border p-6 rounded-2xl glass-card relative shadow-2xl space-y-5">
+            <button 
+              onClick={() => setShowShareModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white text-xs font-mono border border-slate-800 px-2 py-0.5 rounded"
+            >
+              CLOSE
+            </button>
+
+            <div className="flex items-center space-x-2.5 pb-2 border-b border-glass-border">
+              <Navigation className="w-5 h-5 text-neonGreen animate-pulse" />
+              <div>
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Report Distribution Terminal</h3>
+                <p className="text-[10px] text-slate-400 font-mono font-bold">One-click client messaging dispatch system.</p>
+              </div>
+            </div>
+
+            {/* Generated Share Message Preview */}
+            <div className="space-y-2">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Pre-formatted Client Message</span>
+              <textarea
+                readOnly
+                rows={11}
+                className="w-full bg-black/60 border border-slate-800 rounded-xl p-3 font-mono text-[9px] text-slate-300 leading-relaxed focus:outline-none select-text resize-none"
+                value={`*FITSCAN PRO BODY COMPOSITION REPORT*
+👤 *Client Name:* ${activeClient.name}
+📊 *Fitness Score:* ${activeStats.fitnessScore}/100
+⚖️ *Body Fat:* ${activeStats.bodyFat.toFixed(1)}%
+🔥 *BMR (Basics):* ${activeStats.bmr} kcal | *TDEE (Daily):* ${activeStats.tdee} kcal
+🎯 *Daily Calorie Target:* ${activeClient.fitnessGoal === 'fatLoss' ? activeStats.tdee - 450 : activeClient.fitnessGoal === 'bulk' ? activeStats.tdee + 250 : activeStats.tdee} kcal
+🥩 *Daily Protein:* ${activeStats.proteinReq}g
+📍 *Location:* ${activeClient.location || 'Global Client'}
+🌿 *Dietary Cuisine Style:* ${(activeClient.cuisinePreference || 'western').toUpperCase()}
+
+*Actionable Guidelines:*
+- Water Quota: ${activeStats.waterReq} Liters/day
+- Target Sleep: ${activeClient.sleepHours || 8} hours/night
+
+_To view full muscular distribution & AI sports nutrition recommendations, ask your coach for the digital print-out!_`}
+              />
+            </div>
+
+            {/* Tactile Sharing Actions */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => {
+                  const calorieTarget = activeClient.fitnessGoal === 'fatLoss' ? activeStats.tdee - 450 : activeClient.fitnessGoal === 'bulk' ? activeStats.tdee + 250 : activeStats.tdee;
+                  const text = `*FITSCAN PRO BODY COMPOSITION REPORT*
+👤 *Client Name:* ${activeClient.name}
+📊 *Fitness Score:* ${activeStats.fitnessScore}/100
+⚖️ *Body Fat:* ${activeStats.bodyFat.toFixed(1)}%
+🔥 *BMR (Basics):* ${activeStats.bmr} kcal | *TDEE (Daily):* ${activeStats.tdee} kcal
+🎯 *Daily Calorie Target:* ${calorieTarget} kcal
+🥩 *Daily Protein:* ${activeStats.proteinReq}g
+📍 *Location:* ${activeClient.location || 'Global Client'}
+🌿 *Dietary Cuisine Style:* ${(activeClient.cuisinePreference || 'western').toUpperCase()}
+
+*Actionable Guidelines:*
+- Water Quota: ${activeStats.waterReq} Liters/day
+- Target Sleep: ${activeClient.sleepHours || 8} hours/night`;
+
+                  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+                }}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center space-x-1.5 shadow-md shadow-emerald-950/20"
+              >
+                <span>💬 WhatsApp Share</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const calorieTarget = activeClient.fitnessGoal === 'fatLoss' ? activeStats.tdee - 450 : activeClient.fitnessGoal === 'bulk' ? activeStats.tdee + 250 : activeStats.tdee;
+                  const text = `FITSCAN PRO REPORT: ${activeClient.name} - Score: ${activeStats.fitnessScore}/100, Body Fat: ${activeStats.bodyFat.toFixed(1)}%, Calorie Target: ${calorieTarget} kcal, Protein: ${activeStats.proteinReq}g. Default Diet: ${(activeClient.cuisinePreference || 'western').toUpperCase()}. Location: ${activeClient.location || 'Global'}`;
+                  window.open(`sms:?body=${encodeURIComponent(text)}`, '_blank');
+                }}
+                className="bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center space-x-1.5 shadow-md shadow-sky-950/20"
+              >
+                <span>📱 Mobile SMS</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const calorieTarget = activeClient.fitnessGoal === 'fatLoss' ? activeStats.tdee - 450 : activeClient.fitnessGoal === 'bulk' ? activeStats.tdee + 250 : activeStats.tdee;
+                  const subject = `FitScan Pro: Body Assessment Report - ${activeClient.name}`;
+                  const body = `Hi ${activeClient.name},
+
+Here is your calculated FitScan Pro body composition assessment summary:
+
+- Fitness Score: ${activeStats.fitnessScore} / 100
+- Body Fat Percentage: ${activeStats.bodyFat.toFixed(1)}%
+- Active Resting Metabolic Rate (BMR): ${activeStats.bmr} kcal
+- Daily Maintenance (TDEE): ${activeStats.tdee} kcal
+- Personalized Daily Calorie Target: ${calorieTarget} kcal
+- Daily Protein Intake: ${activeStats.proteinReq}g
+- Primary Dietary Style: ${(activeClient.cuisinePreference || 'western').toUpperCase()}
+- Recommended Daily Water Quota: ${activeStats.waterReq} Liters
+
+Actionable guidelines:
+- Aim for ${activeClient.sleepHours || 8} hours of sleep nightly.
+- Drink sufficient water distributed throughout the day.
+
+Ask your trainer for your fully detailed print-out report containing segmental muscle graphs, sports nutrition schedules, and visual coaching analytics!
+
+Best regards,
+Elite Performance Lab Team`;
+
+                  window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+                }}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center space-x-1.5 border border-slate-700"
+              >
+                <span>✉️ Send Email</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const calorieTarget = activeClient.fitnessGoal === 'fatLoss' ? activeStats.tdee - 450 : activeClient.fitnessGoal === 'bulk' ? activeStats.tdee + 250 : activeStats.tdee;
+                  const text = `*FITSCAN PRO BODY COMPOSITION REPORT*
+👤 *Client Name:* ${activeClient.name}
+📊 *Fitness Score:* ${activeStats.fitnessScore}/100
+⚖️ *Body Fat:* ${activeStats.bodyFat.toFixed(1)}%
+🔥 *BMR (Basics):* ${activeStats.bmr} kcal | *TDEE (Daily):* ${activeStats.tdee} kcal
+🎯 *Daily Calorie Target:* ${calorieTarget} kcal
+🥩 *Daily Protein:* ${activeStats.proteinReq}g
+📍 *Location:* ${activeClient.location || 'Global Client'}
+🌿 *Dietary Cuisine Style:* ${(activeClient.cuisinePreference || 'western').toUpperCase()}`;
+
+                  navigator.clipboard.writeText(text).then(() => {
+                    alert("Report successfully copied to your clipboard! Ready to paste.");
+                  });
+                }}
+                className="bg-zinc-800 hover:bg-zinc-700 text-slate-300 hover:text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition flex items-center justify-center space-x-1.5 border border-zinc-700"
+              >
+                <span>📋 Copy Clipboard</span>
+              </button>
             </div>
           </div>
         </div>
